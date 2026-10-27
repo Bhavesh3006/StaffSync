@@ -1,0 +1,231 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* ==========================================================================
+   Design Tokens & CSS Variables
+   ========================================================================== */
+:root {
+  --font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --bs-primary: #4f46e5;
+  --bs-primary-rgb: 79, 70, 229;
+  --primary-hover: #4338ca;
+  --bs-body-bg: #f8fafc;
+  --bs-body-color: #0f172a;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text-muted: #64748b;
+  --touch-target-min: 44px;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* ==========================================================================
+   Base & Reset (Mobile-First)
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-family: var(--font-family-sans-serif);
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessible focus visible outlines */
+:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Prevent image and media blowouts */
+img, svg, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==========================================================================
+   Touch-Friendly Targets (Accessibility & Mobile Usability)
+   ========================================================================== */
+.btn,
+.nav-link,
+.form-control,
+.form-select {
+  min-height: 40px;
+}
+
+@media (max-width: 767.98px) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-height: var(--touch-target-min);
+  }
+}
+
+/* ==========================================================================
+   App Shell Layout (Navbar, Sidebar, Content, Footer)
+   ========================================================================== */
+/* Desktop persistent sidebar offset (>= 992px) */
+@media (min-width: 992px) {
+  .main-content-wrapper,
+  .footer-wrapper {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+}
+
+/* Max content container width on large & extra-large monitors (>= 1400px) */
+.content-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Mobile off-canvas sidebar (< 992px) */
+@media (max-width: 991.98px) {
+  .sidebar-hidden {
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+  .translate-none {
+    transform: translateX(0);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  }
+  .main-content-wrapper,
+  .footer-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Safe Wrapping, Overflow & Flexbox helpers
+   ========================================================================== */
+.text-break-word {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.min-w-0 {
+  min-width: 0 !important;
+}
+
+.hover-bg-light:hover {
+  background-color: #f1f5f9;
+  color: #0f172a !important;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ls-wide {
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+   Responsive Forms
+   ========================================================================== */
+.form-control:focus,
+.form-select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.15);
+}
+
+.required-asterisk {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+/* ==========================================================================
+   Responsive Modals & Dialogs (Full-width friendly on small phones)
+   ========================================================================== */
+@media (max-width: 575.98px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+  .modal-content {
+    border-radius: var(--radius-lg) !important;
+  }
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem !important;
+  }
+}
+
+/* ==========================================================================
+   Dropdowns & Menus on Mobile
+   ========================================================================== */
+@media (max-width: 480px) {
+  .dropdown-menu-responsive {
+    position: fixed !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: 60px !important;
+    width: auto !important;
+    max-width: calc(100vw - 1.5rem) !important;
+    margin: 0 !important;
+  }
+}
+
+/* ==========================================================================
+   Responsive Tables
+   ========================================================================== */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Clean subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive button & badge colors */
+.btn-primary {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+  background-color: #4338ca !important;
+  border-color: #4338ca !important;
+}
