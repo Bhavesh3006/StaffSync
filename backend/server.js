@@ -29,6 +29,7 @@ const app = express();
 // CORS configuration supporting production & development
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  'https://staff-sync-ashy.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
 ].filter(Boolean);
@@ -36,9 +37,11 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
+
     return callback(new Error(`CORS origin blocked: ${origin}`));
   },
   credentials: true,
