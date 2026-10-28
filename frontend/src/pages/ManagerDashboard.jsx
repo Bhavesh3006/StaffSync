@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import API from '../services/api.js';
 import DashboardCard from '../components/DashboardCard.jsx';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import {
   Users,
   Clock,
@@ -11,9 +19,17 @@ import {
   X,
   AlertCircle,
   Sparkles,
+  UserCheck,
+  Calendar,
+  Layers,
+  ArrowRight,
+  Send,
 } from 'lucide-react';
 
+ChartJS.register(ArcElement, Tooltip, Legend);
+
 const ManagerDashboard = () => {
+  const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState(null);
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +55,7 @@ const ManagerDashboard = () => {
         setStats(res.data.stats);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load manager stats:', err);
     } finally {
       setLoading(false);
     }
@@ -49,10 +65,10 @@ const ManagerDashboard = () => {
     try {
       const res = await API.get('/leaves/pending');
       if (res.data.success) {
-        setPendingLeaves(res.data.leaves);
+        setPendingLeaves(res.data.leaves || []);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to load pending leaves:', err);
     }
   };
 
@@ -87,293 +103,350 @@ const ManagerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center py-5">
-        <div className="spinner-border text-primary" role="status">
+      <div className="d-flex flex-column justify-content-center align-items-center py-5 my-5">
+        <div className="spinner-border text-primary mb-3" style={{ width: '2.5rem', height: '2.5rem' }} role="status">
           <span className="visually-hidden">Loading manager analytics...</span>
         </div>
+        <p className="text-muted small fw-medium">Loading team intelligence...</p>
       </div>
     );
   }
 
+  const att = stats?.attendanceToday || {};
+  const teamMembers = stats?.teamMembers || [];
+
+  // Team Attendance Chart
+  const attendanceChartData = {
+    labels: ['Present', 'Late', 'Absent'],
+    datasets: [
+      {
+        data: [att.present || 0, att.late || 0, att.absent || 0],
+        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { boxWidth: 12, padding: 12, font: { size: 11 } },
+      },
+    },
+    cutout: '72%',
+  };
+
   return (
     <div className="space-y-4">
-      {/* Top Header */}
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-          <div className="d-flex align-items-center gap-2 mb-1">
-            <span className="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 fw-semibold">
-              Manager Control Center
-            </span>
+      {/* 1. Hero Banner */}
+      <div className="dashboard-hero rounded-4 p-3 p-sm-4 text-white mb-4">
+        <div className="dashboard-hero-accent pe-none" aria-hidden="true" />
+        <div className="position-relative z-1 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+          <div className="min-w-0">
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <span className="badge glass-widget text-white rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5" style={{ fontSize: '11px' }}>
+                <Users size={14} className="text-warning" />
+                Team Management & Leadership Console
+              </span>
+              <span className="text-white-50 small d-none d-sm-inline-flex align-items-center gap-1" style={{ fontSize: '12px' }}>
+                <Calendar size={13} />
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            <h2 className="fw-bold mb-1 text-white" style={{ fontSize: 'clamp(1.4rem, 2.5vw, 1.85rem)', letterSpacing: '-0.02em' }}>
+              Welcome back, {user?.name?.split(' ')[0]}
+            </h2>
+            <p className="text-white-50 mb-0 small text-break-word" style={{ maxWidth: '680px' }}>
+              Managing <strong>{stats?.teamSize || 0} direct reports</strong>. You have{' '}
+              <strong>{pendingLeaves.length} pending leave request(s)</strong> awaiting your decision.
+            </p>
           </div>
-          <h2 className="fw-bold text-dark mb-1" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)' }}>
-            Team Overview & Operations
-          </h2>
-          <p className="text-secondary small mb-0">
-            Monitor direct report attendance, pending leaves, and skill development
-          </p>
-        </div>
 
-        <div className="d-flex flex-wrap gap-2 w-100 w-md-auto">
-          <Link to="/leaves" className="btn btn-outline-primary rounded-pill px-3 fw-medium flex-fill flex-sm-grow-0">
-            Review Leaves ({pendingLeaves.length})
-          </Link>
-          <Link to="/trainings" className="btn btn-primary rounded-pill px-4 fw-medium flex-fill flex-sm-grow-0 shadow-sm">
-            Assign Training
-          </Link>
+          <div className="d-flex flex-wrap gap-2 flex-shrink-0">
+            <Link
+              to="/leaves"
+              className="btn btn-light text-primary fw-semibold rounded-pill px-3.5 py-2 d-flex align-items-center gap-2 shadow-sm flex-fill flex-sm-grow-0"
+            >
+              <CalendarCheck size={16} /> Pending Approvals ({pendingLeaves.length})
+            </Link>
+            <Link
+              to="/trainings"
+              className="btn glass-widget text-white fw-semibold rounded-pill px-3.5 py-2 d-flex align-items-center gap-2 flex-fill flex-sm-grow-0"
+            >
+              <GraduationCap size={16} /> Assign Training
+            </Link>
+          </div>
         </div>
       </div>
 
       {msg && (
         <div className={`alert alert-${msg.type} alert-dismissible fade show rounded-4`} role="alert">
           {msg.text}
-          <button type="button" className="btn-close" onClick={() => setMsg(null)} aria-label="Close"></button>
+          <button type="button" className="btn-close" onClick={() => setMsg(null)} aria-label="Close" />
         </div>
       )}
 
-      {/* KPI Cards: Responsive Stack (1 col phone, 2 col tablet, 4 col desktop) */}
+      {/* 2. KPI Cards */}
       <div className="row g-3 mb-4">
-        <div className="col-12 col-sm-6 col-lg-3">
+        <div className="col-12 col-sm-6 col-xl-3">
           <DashboardCard
             title="Team Size"
             value={stats?.teamSize || 0}
-            subtitle="Direct reports supervised"
+            subtitle="Direct reports assigned"
             icon={Users}
             color="primary"
           />
         </div>
-        <div className="col-12 col-sm-6 col-lg-3">
+
+        <div className="col-12 col-sm-6 col-xl-3">
           <DashboardCard
             title="Present Today"
-            value={stats?.attendanceToday?.present || 0}
-            subtitle={`${stats?.attendanceToday?.late || 0} late arrivals`}
+            value={att.present || 0}
+            subtitle={`${att.late || 0} late arrivals`}
             icon={Clock}
             color="success"
-            badgeText="On Shift"
+            badgeText={stats?.teamSize > 0 ? `${Math.round(((att.present || 0) / stats.teamSize) * 100)}% active` : '0%'}
+            badgeBg="bg-success-subtle text-success"
+            progress={stats?.teamSize > 0 ? ((att.present || 0) / stats.teamSize) * 100 : 0}
           />
         </div>
-        <div className="col-12 col-sm-6 col-lg-3">
+
+        <div className="col-12 col-sm-6 col-xl-3">
           <DashboardCard
             title="Pending Leaves"
-            value={stats?.pendingLeaves || pendingLeaves.length}
-            subtitle="Awaiting your approval"
+            value={pendingLeaves.length}
+            subtitle="Require team lead review"
             icon={CalendarCheck}
             color="warning"
-            badgeText={pendingLeaves.length > 0 ? 'Action Needed' : 'Clear'}
-            badgeBg="bg-warning-subtle text-warning-emphasis"
+            badgeText={pendingLeaves.length > 0 ? 'Urgent' : 'Clear'}
+            badgeBg={pendingLeaves.length > 0 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-light text-muted'}
           />
         </div>
-        <div className="col-12 col-sm-6 col-lg-3">
+
+        <div className="col-12 col-sm-6 col-xl-3">
           <DashboardCard
-            title="Skill Training"
+            title="Training Completion"
             value={`${stats?.training?.completionRate || 0}%`}
-            subtitle={`${stats?.training?.completed || 0} of ${stats?.training?.totalEnrollments || 0} completed`}
+            subtitle={`${stats?.training?.completed || 0} of ${stats?.training?.totalEnrollments || 0} modules`}
             icon={GraduationCap}
             color="info"
+            progress={stats?.training?.completionRate || 0}
           />
         </div>
       </div>
 
-      {/* Pending Leave Requests requiring attention */}
-      <div className="card border-0 shadow-sm rounded-4 mb-4">
-        <div className="card-header bg-white border-bottom p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div>
-            <h6 className="fw-bold mb-0 text-dark">Pending Team Leave Approvals</h6>
-            <span className="text-muted small">Requests submitted by your direct report team</span>
+      {/* 3. Team Attendance & Direct Reports Section */}
+      <div className="row g-4 mb-4">
+        {/* Team Attendance Chart */}
+        <div className="col-12 col-lg-5">
+          <div className="card border-0 shadow-sm rounded-4 h-100">
+            <div className="card-header bg-white border-bottom p-3 p-sm-4 d-flex justify-content-between align-items-center">
+              <div>
+                <h6 className="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                  <Clock size={18} className="text-success flex-shrink-0" />
+                  Team Attendance Today
+                </h6>
+                <span className="text-muted small" style={{ fontSize: '11px' }}>
+                  Punctuality breakdown of your direct reports
+                </span>
+              </div>
+            </div>
+            <div className="card-body p-3 p-sm-4 d-flex flex-column justify-content-between">
+              <div className="chart-wrapper" style={{ height: '200px' }}>
+                <Doughnut data={attendanceChartData} options={doughnutOptions} />
+              </div>
+              <div className="p-3 bg-light rounded-4 border mt-3 text-center">
+                <span className="text-muted small d-block mb-1" style={{ fontSize: '11px' }}>
+                  Today's Team Turnout
+                </span>
+                <h4 className="fw-bold text-success mb-0">
+                  {stats?.teamSize > 0 ? Math.round(((att.present || 0) / stats.teamSize) * 100) : 0}% Present
+                </h4>
+              </div>
+            </div>
           </div>
-          <span className="badge bg-warning-subtle text-warning-emphasis rounded-pill px-3 py-1">
-            {pendingLeaves.length} Pending
-          </span>
         </div>
-        <div className="table-responsive">
-          <table className="table align-middle mb-0">
-            <thead className="table-light small text-secondary">
-              <tr>
-                <th className="ps-3">Employee</th>
-                <th>Leave Type</th>
-                <th>Dates</th>
-                <th>Days</th>
-                <th>Reason</th>
-                <th className="text-end pe-3">Decision</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingLeaves.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4 text-muted small">
-                    All caught up! No pending leave requests from your team.
-                  </td>
-                </tr>
+
+        {/* Direct Reports List */}
+        <div className="col-12 col-lg-7">
+          <div className="card border-0 shadow-sm rounded-4 h-100">
+            <div className="card-header bg-white border-bottom p-3 p-sm-4 d-flex justify-content-between align-items-center">
+              <div>
+                <h6 className="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                  <Users size={18} className="text-primary flex-shrink-0" />
+                  Direct Reports Directory
+                </h6>
+                <span className="text-muted small" style={{ fontSize: '11px' }}>
+                  {teamMembers.length} team members supervised
+                </span>
+              </div>
+              <Link to="/employees" className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">
+                All Employees
+              </Link>
+            </div>
+            <div className="card-body p-3 p-sm-4">
+              {teamMembers.length === 0 ? (
+                <div className="text-center py-5 text-muted small">No direct reports currently assigned to you.</div>
               ) : (
-                pendingLeaves.map((l) => (
-                  <tr key={l._id}>
-                    <td className="ps-3">
-                      <div className="d-flex align-items-center gap-2">
+                <div className="space-y-2">
+                  {teamMembers.map((member) => (
+                    <div
+                      key={member._id}
+                      className="p-3 rounded-4 border border-light-subtle bg-light bg-opacity-50 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 hover-card mb-2"
+                    >
+                      <div className="d-flex align-items-center gap-3 min-w-0">
                         <div
-                          className="rounded-circle bg-primary-subtle text-primary fw-bold d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width: '32px', height: '32px', fontSize: '13px' }}
+                          className="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0 shadow-xs"
+                          style={{ width: '40px', height: '40px', fontSize: '14px' }}
                         >
-                          {l.employeeId?.userId?.name?.charAt(0) || 'E'}
+                          {member.userId?.name?.charAt(0) || 'E'}
                         </div>
                         <div className="min-w-0">
-                          <p className="fw-semibold mb-0 small text-dark text-truncate">{l.employeeId?.userId?.name}</p>
-                          <span className="text-muted" style={{ fontSize: '11px' }}>
-                            {l.employeeId?.employeeId}
+                          <h6 className="fw-bold text-dark mb-0 small text-truncate">{member.userId?.name}</h6>
+                          <span className="text-muted small d-block" style={{ fontSize: '11px' }}>
+                            {member.designation} • {member.department}
                           </span>
                         </div>
                       </div>
-                    </td>
-                    <td>
-                      <span className="badge bg-secondary-subtle text-secondary text-capitalize">
-                        {l.leaveType}
-                      </span>
-                    </td>
-                    <td className="small text-muted text-nowrap">
-                      {new Date(l.startDate).toLocaleDateString()} - {new Date(l.endDate).toLocaleDateString()}
-                    </td>
-                    <td><strong>{l.daysCount}</strong></td>
-                    <td className="small text-truncate" style={{ maxWidth: '180px' }}>
-                      {l.reason}
-                    </td>
-                    <td className="text-end pe-3">
-                      <div className="d-flex justify-content-end gap-2">
-                        <button
-                          className="btn btn-sm btn-success rounded-pill px-3 d-flex align-items-center gap-1"
-                          onClick={() => handleOpenReview(l, 'approved')}
-                          disabled={actionLoading}
-                        >
-                          <Check size={14} /> Approve
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger rounded-pill px-3 d-flex align-items-center gap-1"
-                          onClick={() => handleOpenReview(l, 'rejected')}
-                          disabled={actionLoading}
-                        >
-                          <X size={14} /> Reject
-                        </button>
+
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small fw-semibold" style={{ fontSize: '11px' }}>
+                          Active
+                        </span>
+                        <span className="badge bg-light text-secondary border rounded-pill px-2.5 py-1 small" style={{ fontSize: '11px' }}>
+                          {member.employeeId}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                ))
+                    </div>
+                  ))}
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Direct Reports Team Roster */}
+      {/* 4. Actionable Pending Leave Requests */}
       <div className="card border-0 shadow-sm rounded-4">
-        <div className="card-header bg-white border-bottom p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <h6 className="fw-bold mb-0 text-dark">Direct Report Roster</h6>
-          <Link to="/employees" className="btn btn-sm btn-outline-primary rounded-pill px-3">
-            View All Employees
+        <div className="card-header bg-white border-bottom p-3 p-sm-4 d-flex justify-content-between align-items-center">
+          <div>
+            <h6 className="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+              <CalendarCheck size={18} className="text-warning flex-shrink-0" />
+              Pending Leave Applications ({pendingLeaves.length})
+            </h6>
+            <span className="text-muted small" style={{ fontSize: '11px' }}>
+              One-click approval workflow for team PTO & sick leaves
+            </span>
+          </div>
+          <Link to="/leaves" className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium">
+            Full Leave History
           </Link>
         </div>
-        <div className="table-responsive">
-          <table className="table align-middle mb-0">
-            <thead className="table-light small text-secondary">
-              <tr>
-                <th className="ps-3">Member</th>
-                <th>Employee ID</th>
-                <th>Designation</th>
-                <th>Department</th>
-                <th>Contact</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats?.teamMembers?.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-4 text-muted small">
-                    No employees currently assigned under your supervision.
-                  </td>
-                </tr>
-              ) : (
-                stats?.teamMembers?.map((m) => (
-                  <tr key={m._id}>
-                    <td className="ps-3">
-                      <div className="d-flex align-items-center gap-2">
-                        <div
-                          className="rounded-circle bg-light border text-dark fw-bold d-flex align-items-center justify-content-center flex-shrink-0"
-                          style={{ width: '32px', height: '32px', fontSize: '13px' }}
-                        >
-                          {m.userId?.name?.charAt(0) || 'U'}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="fw-semibold mb-0 small text-dark text-truncate">{m.userId?.name}</p>
-                          <span className="text-muted text-truncate d-block" style={{ fontSize: '11px', maxWidth: '160px' }}>
-                            {m.userId?.email}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td><code>{m.employeeId}</code></td>
-                    <td className="small">{m.designation}</td>
-                    <td className="small text-muted">{m.department}</td>
-                    <td className="small text-muted">{m.phone || 'N/A'}</td>
-                    <td>
-                      <span className="badge bg-success-subtle text-success rounded-pill text-capitalize">
-                        {m.employmentStatus}
+        <div className="p-3 p-sm-4">
+          {pendingLeaves.length === 0 ? (
+            <div className="text-center py-4">
+              <span className="d-inline-flex p-3 rounded-circle bg-success-subtle text-success mb-2">
+                <Check size={24} />
+              </span>
+              <p className="fw-semibold text-dark mb-0 small">No pending leave requests!</p>
+              <span className="text-muted small" style={{ fontSize: '12px' }}>
+                All team time-off applications have been resolved.
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingLeaves.map((leave) => (
+                <div
+                  key={leave._id}
+                  className="p-3 p-sm-4 rounded-4 border border-warning-subtle bg-warning bg-opacity-10 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3"
+                >
+                  <div className="min-w-0">
+                    <div className="d-flex align-items-center gap-2 mb-1">
+                      <span className="badge bg-primary text-white rounded-pill px-2.5 py-1 text-capitalize" style={{ fontSize: '10px' }}>
+                        {leave.leaveType} Leave
                       </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                      <span className="badge bg-white text-dark border rounded-pill px-2 py-0.5 small" style={{ fontSize: '10px' }}>
+                        {leave.daysCount} Day(s)
+                      </span>
+                    </div>
+                    <h6 className="fw-bold text-dark mb-1">
+                      {leave.userId?.name || leave.employeeId?.employeeId}
+                    </h6>
+                    <p className="text-muted small mb-1" style={{ fontSize: '12px' }}>
+                      <Calendar size={13} className="me-1 inline" />
+                      {new Date(leave.startDate).toLocaleDateString()} to {new Date(leave.endDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-secondary small mb-0 fst-italic" style={{ fontSize: '12px' }}>
+                      "{leave.reason}"
+                    </p>
+                  </div>
+
+                  <div className="d-flex gap-2 flex-shrink-0">
+                    <button
+                      className="btn btn-success rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-1 shadow-sm"
+                      onClick={() => handleOpenReview(leave, 'approved')}
+                    >
+                      <Check size={16} /> Approve
+                    </button>
+                    <button
+                      className="btn btn-outline-danger rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-1"
+                      onClick={() => handleOpenReview(leave, 'rejected')}
+                    >
+                      <X size={16} /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Review Leave Modal */}
-      {showReviewModal && activeLeave && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 border-0 shadow">
+            <div className="modal-content border-0 shadow-lg rounded-4">
               <div className="modal-header border-bottom p-3 p-sm-4">
-                <h5 className="modal-title fw-bold text-dark text-capitalize">
-                  {reviewDecision} Leave: {activeLeave.employeeId?.userId?.name}
+                <h5 className="modal-title fw-bold text-dark">
+                  {reviewDecision === 'approved' ? 'Approve Leave Request' : 'Reject Leave Request'}
                 </h5>
-                <button type="button" className="btn-close" onClick={() => setShowReviewModal(false)} aria-label="Close"></button>
+                <button type="button" className="btn-close" onClick={() => setShowReviewModal(false)} />
               </div>
               <form onSubmit={handleConfirmReview}>
                 <div className="modal-body p-3 p-sm-4">
-                  <div className="p-3 bg-light rounded-3 mb-3 small">
-                    <p className="mb-1">
-                      <strong>Leave Category:</strong> <span className="text-capitalize">{activeLeave.leaveType}</span>
-                    </p>
-                    <p className="mb-1">
-                      <strong>Requested Dates:</strong> {new Date(activeLeave.startDate).toLocaleDateString()} to{' '}
-                      {new Date(activeLeave.endDate).toLocaleDateString()} ({activeLeave.daysCount} days)
-                    </p>
-                    <p className="mb-0">
-                      <strong>Employee Note:</strong> {activeLeave.reason}
-                    </p>
-                  </div>
-
+                  <p className="small text-muted mb-3">
+                    You are marking this request from{' '}
+                    <strong>{activeLeave?.userId?.name || 'Employee'}</strong> as{' '}
+                    <span className={`fw-bold text-uppercase ${reviewDecision === 'approved' ? 'text-success' : 'text-danger'}`}>
+                      {reviewDecision}
+                    </span>.
+                  </p>
                   <div className="mb-3">
-                    <label className="form-label small fw-semibold text-secondary">
-                      Reviewer Decision Comments <span className="required-asterisk">*</span>
-                    </label>
+                    <label className="form-label small fw-semibold text-dark">Manager Decision Note / Reason</label>
                     <textarea
-                      className="form-control"
+                      className="form-control rounded-3"
                       rows="3"
-                      required
                       value={reviewComment}
                       onChange={(e) => setReviewComment(e.target.value)}
-                    ></textarea>
+                      placeholder="Add an optional comment for the employee..."
+                    />
                   </div>
                 </div>
-                <div className="modal-footer border-top p-3 d-flex flex-column flex-sm-row justify-content-end gap-2">
-                  <button type="button" className="btn btn-light rounded-pill px-4 w-100 w-sm-auto" onClick={() => setShowReviewModal(false)}>
+                <div className="modal-footer border-top p-3 d-flex justify-content-end gap-2">
+                  <button type="button" className="btn btn-light rounded-pill px-4" onClick={() => setShowReviewModal(false)}>
                     Cancel
                   </button>
                   <button
                     type="submit"
+                    className={`btn rounded-pill px-4 fw-semibold ${reviewDecision === 'approved' ? 'btn-success' : 'btn-danger'}`}
                     disabled={actionLoading}
-                    className={`btn rounded-pill px-4 w-100 w-sm-auto ${
-                      reviewDecision === 'approved' ? 'btn-success' : 'btn-danger'
-                    }`}
                   >
-                    {actionLoading ? 'Processing...' : `Confirm ${reviewDecision === 'approved' ? 'Approval' : 'Rejection'}`}
+                    {actionLoading ? 'Saving...' : `Confirm ${reviewDecision === 'approved' ? 'Approval' : 'Rejection'}`}
                   </button>
                 </div>
               </form>
